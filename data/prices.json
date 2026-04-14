@@ -1,4 +1,15 @@
 {
-  "lastUpdated": null,
-  "hotels": []
+  "lastUpdated": "2026-04-14T03:17:44.570604",
+  "hotels": [
+    {
+      "id": "1775998887480",
+      "name": "雨庵　金沢",
+      "dates": []
+    },
+    {
+      "id": "1776002952893",
+      "name": "KUMU金沢",
+      "dates": []
+    }
+  ]
 }
