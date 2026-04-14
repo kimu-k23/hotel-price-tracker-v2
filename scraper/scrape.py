@@ -77,11 +77,20 @@ def extract_ids_from_url(url):
 
 
 def get_cookies(url, context):
-    """Playwrightでページを開いてCookieを取得する"""
+    """
+    Playwrightでページを開いてCookieを取得する。
+    GitHub Actions（海外サーバー）ではCookieが取得できない場合があるため、
+    まずYahoo!トラベルのトップページにアクセスしてセッションを確立してから
+    対象ページにアクセスする。
+    """
     page = context.new_page()
     try:
-        page.goto(url, wait_until='domcontentloaded', timeout=20000)
+        # まずトップページにアクセスしてセッションCookieを取得
+        page.goto('https://travel.yahoo.co.jp/', wait_until='domcontentloaded', timeout=20000)
         time.sleep(2)
+        # 次に対象ページにアクセス
+        page.goto(url, wait_until='domcontentloaded', timeout=20000)
+        time.sleep(3)
     except Exception as e:
         log(f"  Cookie取得中のエラー（続行）: {e}")
     finally:
@@ -153,16 +162,39 @@ query Search(
         'Referer': f'https://travel.yahoo.co.jp/{accommodation_id}/',
         'Origin': 'https://travel.yahoo.co.jp',
         'User-Agent': USER_AGENT,
-        'Cookie': cookies_str,
+        'Accept': 'application/json',
+        'Accept-Language': 'ja,en;q=0.9',
     }
+
+    # Cookieがあれば付与
+    if cookies_str:
+        headers['Cookie'] = cookies_str
 
     payload = [{"query": query, "variables": variables, "operationName": "Search"}]
 
+    # 最初のリクエスト（Cookieあり or なし）
     resp = requests.post(GRAPHQL_URL, json=payload, headers=headers, timeout=30)
+
+    # 403の場合、Cookieなしでリトライ
+    if resp.status_code == 403 and cookies_str:
+        log("  403エラー → Cookieなしでリトライ...")
+        headers.pop('Cookie', None)
+        resp = requests.post(GRAPHQL_URL, json=payload, headers=headers, timeout=30)
+
+    # それでも403なら、ペイロードをリスト→単体に変えてリトライ
+    if resp.status_code == 403:
+        log("  403エラー → 単体ペイロードでリトライ...")
+        single_payload = {"query": query, "variables": variables, "operationName": "Search"}
+        resp = requests.post(GRAPHQL_URL, json=single_payload, headers=headers, timeout=30)
+
     resp.raise_for_status()
 
     data = resp.json()
-    calendar = data[0]['data']['accommodation']['roomPlan']['calendar']
+    # レスポンスがリスト形式か単体かを判定
+    if isinstance(data, list):
+        calendar = data[0]['data']['accommodation']['roomPlan']['calendar']
+    else:
+        calendar = data['data']['accommodation']['roomPlan']['calendar']
 
     # 価格データに変換
     results = []
