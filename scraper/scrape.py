@@ -8,18 +8,17 @@ prices.jsonを更新する。
 
 仕組み:
 1. URLからaccommodationId/planId/roomIdを抽出
-2. Playwrightで一瞬だけページを開いてCookieを取得
-3. requestsでGraphQL APIに直接クエリを投げる
+2. Playwrightでページを開く
+3. ブラウザ内からfetch()でGraphQL APIを叩く（Cookie/ヘッダーは自動処理）
 4. calendarデータ（日付・価格・割引価格）を保存
-5. GitHub Actionsがcommit & pushを担当（このスクリプトではやらない）
+5. GitHub Actionsがcommit & pushを担当
 """
 
-import json, os, re, sys, time, requests
+import json, os, re, sys, time
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
 # GitHub Actionsではリポジトリのルートが作業ディレクトリ
-# ローカルでも動くように、環境変数またはスクリプト位置から判定
 SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.environ.get('GITHUB_WORKSPACE', os.path.dirname(SCRIPT_DIR))
 CONFIG_PATH = os.path.join(PROJECT_DIR, 'data', 'config.json')
@@ -29,6 +28,33 @@ GRAPHQL_URL = 'https://travel.yahoo.co.jp/graphql?lang=ja-JP'
 USER_AGENT  = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
                'AppleWebKit/537.36 (KHTML, like Gecko) '
                'Chrome/120.0.0.0 Safari/537.36')
+
+# GraphQLクエリ（ブラウザ内で実行する）
+GRAPHQL_QUERY = """
+query Search(
+  $accommodationId: AccommodationIdScalar!,
+  $roomId: RoomIdScalar!,
+  $planId: PlanIdScalar!,
+  $planUwanosePointVariation: PlanUwanosePointVariationScalar! = 0,
+  $input: RoomPlanCalendarInput!,
+  $currency: Currency!
+) {
+  accommodation(accommodationId: $accommodationId) {
+    roomPlan(
+      roomId: $roomId
+      planId: $planId
+      planUwanosePointVariation: $planUwanosePointVariation
+    ) {
+      calendar(input: $input) {
+        date
+        amount(currency: $currency)
+        discountAmount(currency: $currency)
+        holiday
+      }
+    }
+  }
+}
+"""
 
 
 def log(msg):
@@ -76,69 +102,31 @@ def extract_ids_from_url(url):
     return accom.group(1), plan.group(1), room.group(1)
 
 
-def get_cookies(url, context):
+def fetch_calendar_via_browser(page, accommodation_id, room_id, plan_id, date_from, date_to):
     """
-    Playwrightでページを開いてCookieを取得する。
-    GitHub Actions（海外サーバー）ではCookieが取得できない場合があるため、
-    まずYahoo!トラベルのトップページにアクセスしてセッションを確立してから
-    対象ページにアクセスする。
+    ブラウザ内からfetch()でGraphQL APIを呼ぶ。
+    ブラウザのセッション（Cookie、Referer等）が自動で付与されるため、
+    海外IPからでもAPIにアクセスできる可能性が高い。
     """
-    page = context.new_page()
-    try:
-        # まずトップページにアクセスしてセッションCookieを取得
-        page.goto('https://travel.yahoo.co.jp/', wait_until='domcontentloaded', timeout=20000)
-        time.sleep(2)
-        # 次に対象ページにアクセス
-        page.goto(url, wait_until='domcontentloaded', timeout=20000)
-        time.sleep(3)
-    except Exception as e:
-        log(f"  Cookie取得中のエラー（続行）: {e}")
-    finally:
-        page.close()
-
-    cookies = context.cookies()
-    # yahoo.co.jpドメインのCookieのみ使用
-    return '; '.join([
-        f"{c['name']}={c['value']}"
-        for c in cookies
-        if 'yahoo' in c.get('domain', '') or 'ikyu' in c.get('domain', '')
-    ])
-
-
-def fetch_calendar(accommodation_id, room_id, plan_id, date_from, date_to, cookies_str):
-    """
-    GraphQL APIにカレンダークエリを投げて価格データを取得する。
-
-    返すデータ形式:
-    [{"date": "2026-09-15", "price": 24860}, {"date": "2026-09-19", "price": null}, ...]
-    - price = discountAmount（割引後価格） ※Yahoo!トラベルに表示される価格
-    - price = null の場合は空室なし（amount=0）
-    """
-    query = """
-query Search(
-  $accommodationId: AccommodationIdScalar!,
-  $roomId: RoomIdScalar!,
-  $planId: PlanIdScalar!,
-  $planUwanosePointVariation: PlanUwanosePointVariationScalar! = 0,
-  $input: RoomPlanCalendarInput!,
-  $currency: Currency!
-) {
-  accommodation(accommodationId: $accommodationId) {
-    roomPlan(
-      roomId: $roomId
-      planId: $planId
-      planUwanosePointVariation: $planUwanosePointVariation
-    ) {
-      calendar(input: $input) {
-        date
-        amount(currency: $currency)
-        discountAmount(currency: $currency)
-        holiday
-      }
+    # JavaScriptでfetch()を実行し、結果をPythonに返す
+    js_code = """
+    async ([query, variables]) => {
+        const payload = [{
+            query: query,
+            variables: variables,
+            operationName: "Search"
+        }];
+        const resp = await fetch('https://travel.yahoo.co.jp/graphql?lang=ja-JP', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+            return { error: `HTTP ${resp.status}`, status: resp.status };
+        }
+        return await resp.json();
     }
-  }
-}
-"""
+    """
 
     variables = {
         "accommodationId": accommodation_id,
@@ -157,44 +145,17 @@ query Search(
         "currency": "JPY"
     }
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Referer': f'https://travel.yahoo.co.jp/{accommodation_id}/',
-        'Origin': 'https://travel.yahoo.co.jp',
-        'User-Agent': USER_AGENT,
-        'Accept': 'application/json',
-        'Accept-Language': 'ja,en;q=0.9',
-    }
+    result = page.evaluate(js_code, [GRAPHQL_QUERY, variables])
 
-    # Cookieがあれば付与
-    if cookies_str:
-        headers['Cookie'] = cookies_str
+    # エラーチェック
+    if isinstance(result, dict) and 'error' in result:
+        raise Exception(f"GraphQL APIエラー: {result['error']}")
 
-    payload = [{"query": query, "variables": variables, "operationName": "Search"}]
-
-    # 最初のリクエスト（Cookieあり or なし）
-    resp = requests.post(GRAPHQL_URL, json=payload, headers=headers, timeout=30)
-
-    # 403の場合、Cookieなしでリトライ
-    if resp.status_code == 403 and cookies_str:
-        log("  403エラー → Cookieなしでリトライ...")
-        headers.pop('Cookie', None)
-        resp = requests.post(GRAPHQL_URL, json=payload, headers=headers, timeout=30)
-
-    # それでも403なら、ペイロードをリスト→単体に変えてリトライ
-    if resp.status_code == 403:
-        log("  403エラー → 単体ペイロードでリトライ...")
-        single_payload = {"query": query, "variables": variables, "operationName": "Search"}
-        resp = requests.post(GRAPHQL_URL, json=single_payload, headers=headers, timeout=30)
-
-    resp.raise_for_status()
-
-    data = resp.json()
-    # レスポンスがリスト形式か単体かを判定
-    if isinstance(data, list):
-        calendar = data[0]['data']['accommodation']['roomPlan']['calendar']
+    # レスポンス解析
+    if isinstance(result, list):
+        calendar = result[0]['data']['accommodation']['roomPlan']['calendar']
     else:
-        calendar = data['data']['accommodation']['roomPlan']['calendar']
+        calendar = result['data']['accommodation']['roomPlan']['calendar']
 
     # 価格データに変換
     results = []
@@ -228,23 +189,34 @@ def scrape_hotel(hotel, context):
 
     log(f"  accommodationId={accommodation_id}, planId={plan_id}, roomId={room_id}")
 
-    # Cookie取得
-    log("  Cookieを取得中...")
-    cookies_str = get_cookies(url, context)
-    log(f"  Cookie: {len(cookies_str)}文字")
+    # ページを開いてセッションを確立
+    log("  ページを開いてセッション確立中...")
+    page = context.new_page()
+    try:
+        page.goto(url, wait_until='domcontentloaded', timeout=30000)
+        time.sleep(3)
+        log(f"  ページタイトル: {page.title()}")
 
-    # GraphQL APIで価格取得
-    log(f"  APIで価格取得中（{date_from} 〜 {date_to}）...")
-    dates_list = fetch_calendar(accommodation_id, room_id, plan_id, date_from, date_to, cookies_str)
+        # ブラウザ内からGraphQL APIを呼ぶ
+        log(f"  ブラウザ内fetch()で価格取得中（{date_from} 〜 {date_to}）...")
+        dates_list = fetch_calendar_via_browser(
+            page, accommodation_id, room_id, plan_id, date_from, date_to
+        )
 
-    got  = sum(1 for d in dates_list if d['price'] is not None)
-    none = sum(1 for d in dates_list if d['price'] is None)
-    log(f"  合計: {len(dates_list)}日分 / 価格あり:{got}日 / 空室なし:{none}日")
+        got  = sum(1 for d in dates_list if d['price'] is not None)
+        none = sum(1 for d in dates_list if d['price'] is None)
+        log(f"  合計: {len(dates_list)}日分 / 価格あり:{got}日 / 空室なし:{none}日")
 
-    if got > 0:
-        log(f"  価格例: {[d for d in dates_list if d['price']][:3]}")
+        if got > 0:
+            log(f"  価格例: {[d for d in dates_list if d['price']][:3]}")
 
-    return dates_list
+        return dates_list
+
+    except Exception as e:
+        log(f"  エラー: {e}")
+        return []
+    finally:
+        page.close()
 
 
 def main():
@@ -272,7 +244,9 @@ def main():
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             locale='ja-JP',
-            user_agent=USER_AGENT
+            user_agent=USER_AGENT,
+            # 日本のタイムゾーンを設定
+            timezone_id='Asia/Tokyo',
         )
 
         for hotel in config['hotels']:
@@ -295,7 +269,6 @@ def main():
     # 全ホテルの取得データが0件の場合、既存データを上書きしない
     total_dates = sum(len(h['dates']) for h in prices_data['hotels'])
     if total_dates == 0 and existing_prices.get('hotels'):
-        # 既存データに価格があるなら上書きしない
         existing_total = sum(len(h.get('dates', [])) for h in existing_prices['hotels'])
         if existing_total > 0:
             log("⚠️ 全ホテルの取得データが0件です。既存データを保護するため上書きしません。")
