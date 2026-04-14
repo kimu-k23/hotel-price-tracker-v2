@@ -1,0 +1,20 @@
+{
+  "hotels": [
+    {
+      "id": "1775998887480",
+      "name": "雨庵　金沢",
+      "url": "https://travel.yahoo.co.jp/00002494/?adc=1&discsort=1&lc=1&pln=11590366&ppc=2&rc=1&rm=10090696&si=1&st=1",
+      "dateFrom": "2026-09-15",
+      "dateTo": "2026-11-19",
+      "priceThreshold": 25000
+    },
+    {
+      "id": "1776002952893",
+      "name": "KUMU金沢",
+      "url": "https://travel.yahoo.co.jp/00082516/?adc=1&discsort=1&lc=1&pln=11410682&ppc=2&rc=1&rm=10236251&si=1&st=1",
+      "dateFrom": "2026-09-15",
+      "dateTo": "2026-11-19",
+      "priceThreshold": 22860
+    }
+  ]
+}

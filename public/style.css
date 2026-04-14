@@ -1,0 +1,497 @@
+/* ===== リセット & ベース ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+  background: #f5f0eb;
+  color: #5a4a42;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+/* ===== ヘッダー ===== */
+.header {
+  background: #fff8f5;
+  padding: 28px 20px 20px;
+  text-align: center;
+  border-bottom: 1px solid #ecddd6;
+}
+
+.header h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #c4836a;
+  letter-spacing: 0.05em;
+}
+
+.last-updated {
+  font-size: 0.72rem;
+  color: #b8a8a0;
+  margin-top: 4px;
+}
+
+/* ===== 今すぐ更新ボタン ===== */
+.btn-refresh {
+  margin-top: 12px;
+  padding: 10px 24px;
+  background: linear-gradient(145deg, #88b8d8, #6898c0);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 2px 2px 6px #88a8c040;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.btn-refresh:active {
+  transform: scale(0.97);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-refresh .spinning {
+  animation: spin 1s linear infinite;
+}
+
+.refresh-note {
+  font-size: 0.68rem;
+  color: #b8a8a0;
+  margin-top: 6px;
+  min-height: 1em;
+}
+
+/* ===== ニュモーフィズム（浮き出し）カード ===== */
+.card {
+  background: #f5f0eb;
+  margin: 20px 16px;
+  padding: 22px 18px;
+  border-radius: 20px;
+  box-shadow:
+    6px 6px 14px #ddd5ce,
+    -6px -6px 14px #ffffff;
+}
+
+.card h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #c4836a;
+  margin-bottom: 18px;
+  letter-spacing: 0.03em;
+}
+
+/* ===== フォーム ===== */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #9a8880;
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 11px 14px;
+  background: #f5f0eb;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #5a4a42;
+  box-shadow:
+    inset 3px 3px 7px #ddd5ce,
+    inset -3px -3px 7px #ffffff;
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+
+.form-group input:focus {
+  box-shadow:
+    inset 4px 4px 8px #d0c8c0,
+    inset -4px -4px 8px #ffffff;
+}
+
+.form-group input::placeholder {
+  color: #c0b0a8;
+  font-size: 0.85rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.price-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-input input {
+  flex: 1;
+}
+
+.price-input .unit {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #9a8880;
+  flex-shrink: 0;
+}
+
+/* ===== ボタン共通 ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* メインボタン（サーモンピンク） */
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(145deg, #e8957a, #d4705a);
+  color: white;
+  box-shadow:
+    4px 4px 10px #c8887040,
+    -2px -2px 6px #ffffff80;
+}
+
+.btn-primary:hover {
+  box-shadow:
+    6px 6px 14px #c8887060,
+    -2px -2px 6px #ffffff80;
+}
+
+/* 詳細ボタン（ミントグリーン） */
+.btn-view {
+  padding: 7px 14px;
+  background: linear-gradient(145deg, #a8d8c8, #88c4b0);
+  color: white;
+  font-size: 0.78rem;
+  border-radius: 10px;
+  box-shadow: 2px 2px 6px #88c4b040;
+}
+
+/* 削除ボタン（淡いサーモン） */
+.btn-danger {
+  padding: 7px 12px;
+  background: linear-gradient(145deg, #f0b0a0, #e09080);
+  color: white;
+  font-size: 0.78rem;
+  border-radius: 10px;
+  box-shadow: 2px 2px 6px #e0908040;
+}
+
+/* ===== ホテル一覧 ===== */
+.hotel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.empty-message {
+  text-align: center;
+  color: #b8a8a0;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+.hotel-item {
+  background: #f5f0eb;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow:
+    4px 4px 10px #ddd5ce,
+    -4px -4px 10px #ffffff;
+}
+
+.hotel-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hotel-item-info h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #5a4a42;
+}
+
+.hotel-item-info .hotel-period {
+  font-size: 0.75rem;
+  color: #b8a8a0;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hotel-item-info .hotel-threshold {
+  font-size: 0.75rem;
+  color: #e09080;
+  font-weight: 600;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* プランURLリンク */
+.hotel-plan-link {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: #88a8d0;
+  text-decoration: none;
+  margin-top: 2px;
+}
+
+.hotel-plan-link:hover {
+  text-decoration: underline;
+}
+
+.hotel-plan-link i {
+  font-size: 0.6rem;
+}
+
+/* 編集ボタン（ペンアイコン） */
+.btn-edit {
+  background: none;
+  border: none;
+  color: #b8a8a0;
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.btn-edit:hover {
+  color: #c4836a;
+}
+
+/* カレンダーボタン（開いている時） */
+.btn-view.active {
+  background: linear-gradient(145deg, #b8a8a0, #9a8880);
+}
+
+.hotel-item-info .hotel-min-price {
+  font-size: 0.82rem;
+  color: #88c4b0;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.hotel-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ===== カレンダー ===== */
+.calendar-view {
+  overflow-x: auto;
+}
+
+.calendar-month {
+  margin-bottom: 24px;
+}
+
+.calendar-month h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #9a8880;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* 曜日ヘッダー */
+.calendar-day-header {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #b8a8a0;
+  padding: 4px 0;
+}
+
+/* 日付セル */
+.calendar-day {
+  background: #f5f0eb;
+  border-radius: 12px;
+  padding: 6px 2px;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow:
+    3px 3px 7px #ddd5ce,
+    -3px -3px 7px #ffffff;
+  cursor: default;
+}
+
+.calendar-day.empty {
+  background: transparent;
+  box-shadow: none;
+}
+
+.calendar-day .day-number {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #7a6a62;
+}
+
+.calendar-day .day-price {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #9a8880;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* 価格が閾値以下 → ピンク背景 + 赤文字 */
+.calendar-day.deal {
+  background: linear-gradient(145deg, #fde8e4, #fcd4cc);
+  box-shadow:
+    3px 3px 7px #e8c8c0,
+    -3px -3px 7px #ffffff;
+}
+
+.calendar-day.deal .day-price {
+  color: #d4604a;
+}
+
+.calendar-day.deal .day-number {
+  color: #d4604a;
+}
+
+/* 空室なし */
+.calendar-day.no-vacancy .day-price {
+  color: #c8b8b0;
+  font-size: 0.6rem;
+}
+
+/* 価格データなし */
+.calendar-day.no-data .day-price {
+  color: #d0c8c0;
+}
+
+/* クリック可能な日付セル */
+.calendar-day.clickable {
+  cursor: pointer;
+}
+
+.calendar-day.clickable:active {
+  transform: scale(0.95);
+  box-shadow:
+    1px 1px 4px #ddd5ce,
+    -1px -1px 4px #ffffff;
+}
+
+/* 日曜・土曜の文字色 */
+.calendar-day.sunday .day-number  { color: #e09080; }
+.calendar-day.saturday .day-number { color: #88a8d0; }
+
+/* ===== お得な日程リスト ===== */
+.alert-list {
+  margin-top: 18px;
+  padding: 16px;
+  background: linear-gradient(145deg, #fde8e4, #fcd4cc);
+  border-radius: 16px;
+  box-shadow:
+    3px 3px 8px #e8c8c0,
+    -3px -3px 8px #ffffff;
+}
+
+.alert-list h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #d4604a;
+  margin-bottom: 10px;
+}
+
+.alert-list ul {
+  list-style: none;
+}
+
+.alert-list li {
+  padding: 7px 0;
+  font-size: 0.82rem;
+  color: #c05040;
+  border-bottom: 1px solid #f0c8c0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.alert-list li:last-child {
+  border-bottom: none;
+}
+
+.alert-price {
+  font-weight: 700;
+}
+
+/* ===== ローディング ===== */
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #b8a8a0;
+  font-size: 0.85rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #e8d8d0;
+  border-top-color: #c4836a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== レスポンシブ ===== */
+@media (min-width: 768px) {
+  #app {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+}

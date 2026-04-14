@@ -1,0 +1,58 @@
+# ===== GitHub Actions: ホテル価格スクレイパー =====
+# 毎朝9時（日本時間）に自動実行 + スマホから手動トリガー可能
+#
+# 仕組み:
+# 1. リポジトリをチェックアウト
+# 2. Python + Playwright をセットアップ
+# 3. scrape.py を実行して prices.json を更新
+# 4. 変更があれば自動で commit & push
+
+name: 価格取得
+
+on:
+  # 毎朝9時（日本時間 = UTC 0時）に自動実行
+  schedule:
+    - cron: '0 0 * * *'
+
+  # スマホの「今すぐ更新」ボタンからトリガー
+  workflow_dispatch:
+
+# prices.json を push するための書き込み権限
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # 1. リポジトリをチェックアウト
+      - name: リポジトリ取得
+        uses: actions/checkout@v4
+
+      # 2. Python セットアップ
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. 依存パッケージをインストール
+      - name: 依存パッケージインストール
+        run: |
+          pip install requests playwright
+          playwright install chromium
+          playwright install-deps chromium
+
+      # 4. スクレイパー実行
+      - name: 価格取得実行
+        run: python scraper/scrape.py
+
+      # 5. 変更があれば commit & push
+      - name: 結果をコミット＆プッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/prices.json
+          git diff --staged --quiet || git commit -m "価格データ更新: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')"
+          git push

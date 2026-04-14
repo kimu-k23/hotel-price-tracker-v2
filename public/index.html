@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ホテル価格トラッカー</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- アイコン用のFont Awesome（無料CDN） -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <div id="app">
+    <!-- ヘッダー部分 -->
+    <header class="header">
+      <h1><i class="fas fa-hotel"></i> ホテル価格トラッカー</h1>
+      <p class="last-updated" id="lastUpdated">最終更新: ---</p>
+      <!-- 今すぐ更新ボタン（スマホから価格取得をトリガー） -->
+      <button id="refreshBtn" class="btn btn-refresh" onclick="triggerScrape()">
+        <i class="fas fa-sync-alt" id="refreshIcon"></i> 今すぐ更新
+      </button>
+      <p class="refresh-note" id="refreshNote"></p>
+    </header>
+
+    <!-- ホテル追加フォーム -->
+    <section class="card add-form">
+      <h2><i class="fas fa-plus-circle"></i> ホテルを追加</h2>
+      <div class="form-group">
+        <label for="hotelName">ホテル名</label>
+        <input type="text" id="hotelName" placeholder="例: ○○ホテル東京">
+      </div>
+      <div class="form-group">
+        <label for="hotelUrl">Yahoo!トラベル プランURL</label>
+        <input type="url" id="hotelUrl" placeholder="https://travel.yahoo.co.jp/...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="dateFrom">チェック開始日</label>
+          <input type="date" id="dateFrom">
+        </div>
+        <div class="form-group">
+          <label for="dateTo">チェック終了日</label>
+          <input type="date" id="dateTo">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="priceThreshold">通知価格（この金額以下で赤表示）</label>
+        <div class="price-input">
+          <input type="number" id="priceThreshold" placeholder="例: 15000" step="1000">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <button id="addHotelBtn" class="btn btn-primary">
+        <i class="fas fa-plus"></i> 追加する
+      </button>
+    </section>
+
+    <!-- ホテル一覧 -->
+    <section class="card">
+      <h2><i class="fas fa-list"></i> 登録ホテル一覧</h2>
+      <div id="hotelList" class="hotel-list">
+        <p class="empty-message">ホテルが登録されていません</p>
+      </div>
+    </section>
+
+    <!-- カレンダー表示エリア（ホテル選択時に表示） -->
+    <section class="card" id="calendarSection" style="display:none;">
+      <h2 id="calendarTitle"><i class="fas fa-calendar-alt"></i> カレンダー</h2>
+      <div id="calendarView" class="calendar-view"></div>
+      <!-- 価格が閾値以下の日付アラート -->
+      <div id="alertList" class="alert-list" style="display:none;">
+        <h3><i class="fas fa-bell"></i> お得な日程</h3>
+        <ul id="alertItems"></ul>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

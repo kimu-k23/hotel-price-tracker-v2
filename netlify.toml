@@ -1,0 +1,17 @@
+# ===== Netlify設定ファイル =====
+
+# ビルド設定
+[build]
+  # ビルド時にdata/フォルダをpublic/にコピーして公開する
+  command = "cp -r data public/data"
+  publish = "public"
+
+# Netlify Functionsの場所を指定
+[functions]
+  directory = "netlify/functions"
+
+# ヘッダー設定（キャッシュを無効化して常に最新データを取得）
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
