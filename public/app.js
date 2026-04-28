@@ -47,33 +47,59 @@ function setupEventListeners() {
   document.getElementById('addHotelBtn').addEventListener('click', addHotel);
 }
 
-// --- 今すぐ更新（GitHub Actionsをトリガー） ---
+// --- 今すぐ更新（Edge Functionで日本サーバーから価格取得） ---
 async function triggerScrape() {
   const btn  = document.getElementById('refreshBtn');
   const icon = document.getElementById('refreshIcon');
   const note = document.getElementById('refreshNote');
 
-  // ボタンを無効化してスピナー表示
+  if (config.hotels.length === 0) {
+    note.textContent = 'ホテルを追加してから更新してください';
+    return;
+  }
+
   btn.disabled = true;
   icon.classList.add('spinning');
-  note.textContent = '更新リクエスト送信中...';
+  note.textContent = '価格を取得中...（数秒かかります）';
 
   try {
-    // Netlify Functionを経由してGitHub Actions workflowをトリガー
-    const res = await fetch('/.netlify/functions/trigger-scrape', { method: 'POST' });
-    const data = await res.json();
+    // Edge Functionで価格取得（日本のサーバーから実行 → Yahoo!トラベルにアクセス可能）
+    const fetchRes = await fetch('/api/fetch-prices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotels: config.hotels }),
+    });
 
-    if (!res.ok) throw new Error(data.error || '更新に失敗しました');
+    if (!fetchRes.ok) {
+      const err = await fetchRes.json();
+      throw new Error(err.error || '価格取得に失敗しました');
+    }
 
-    note.textContent = '更新を開始しました！反映まで2〜3分お待ちください';
-    // 3分後にデータを自動リロード
-    setTimeout(async () => {
-      await loadData();
-      renderHotelList();
-      updateLastUpdated();
-      note.textContent = 'データを再読み込みしました';
-      setTimeout(() => { note.textContent = ''; }, 3000);
-    }, 180000);
+    const newPrices = await fetchRes.json();
+    note.textContent = '取得完了！保存中...';
+
+    // 取得した価格データをGitHubに保存
+    const saveRes = await fetch('/.netlify/functions/save-prices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newPrices),
+    });
+
+    if (!saveRes.ok) {
+      const err = await saveRes.json();
+      throw new Error(err.error || '保存に失敗しました');
+    }
+
+    note.textContent = '保存しました！データを読み込み中...';
+
+    // GitHubのキャッシュ反映を少し待ってからリロード
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    await loadData();
+    renderHotelList();
+    updateLastUpdated();
+    note.textContent = '更新完了！';
+    setTimeout(() => { note.textContent = ''; }, 3000);
+
   } catch (e) {
     note.textContent = 'エラー: ' + e.message;
   } finally {
